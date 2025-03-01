@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>WebSocket Room Test</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+            #messageArea {
+                height: 300px;
+                border: 1px solid #ccc;
+                margin-bottom: 10px;
+                padding: 10px;
+                overflow-y: auto;
+                background-color: #f9f9f9;
+            }
+            input,
+            button {
+                padding: 8px;
+                margin: 5px 0;
+            }
+            .controls {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 10px;
+            }
+            .message {
+                margin: 5px 0;
+                padding: 5px;
+                border-bottom: 1px solid #eee;
+            }
+            .system {
+                color: #888;
+                font-style: italic;
+            }
+            .error {
+                color: #d9534f;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>WebSocket Room Test</h1>
+
+        <div class="controls">
+            <input type="text" id="roomId" placeholder="Room ID" value="test-room" />
+            <button id="connectBtn">Connect</button>
+            <button id="disconnectBtn" disabled>Disconnect</button>
+        </div>
+
+        <div id="messageArea"></div>
+
+        <div class="controls">
+            <input type="text" id="messageInput" placeholder="Type a message..." disabled />
+            <button id="sendBtn" disabled>Send</button>
+        </div>
+
+        <script>
+            const roomIdInput = document.getElementById("roomId");
+            const connectBtn = document.getElementById("connectBtn");
+            const disconnectBtn = document.getElementById("disconnectBtn");
+            const messageArea = document.getElementById("messageArea");
+            const messageInput = document.getElementById("messageInput");
+            const sendBtn = document.getElementById("sendBtn");
+
+            let socket = null;
+
+            function addMessage(message, type = "normal") {
+                const messageElement = document.createElement("div");
+                messageElement.classList.add("message");
+                if (type) {
+                    messageElement.classList.add(type);
+                }
+                messageElement.textContent = message;
+                messageArea.appendChild(messageElement);
+                messageArea.scrollTop = messageArea.scrollHeight;
+            }
+
+            connectBtn.addEventListener("click", () => {
+                const roomId = roomIdInput.value.trim();
+                if (!roomId) {
+                    addMessage("Please enter a room ID", "error");
+                    return;
+                }
+
+                if (socket) {
+                    socket.close();
+                }
+
+                const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+                const host = "localhost:8000";
+                const wsUrl = `${protocol}//${host}/room/${roomId}`;
+
+                addMessage(`Connecting to ${wsUrl}...`, "system");
+
+                try {
+                    socket = new WebSocket(wsUrl);
+
+                    socket.onopen = () => {
+                        addMessage("Connected to server!", "system");
+                        connectBtn.disabled = true;
+                        disconnectBtn.disabled = false;
+                        messageInput.disabled = false;
+                        sendBtn.disabled = false;
+                        roomIdInput.disabled = true;
+                    };
+
+                    socket.onmessage = (event) => {
+                        addMessage(`Received: ${event.data}`);
+                    };
+
+                    socket.onclose = () => {
+                        addMessage("Disconnected from server", "system");
+                        connectBtn.disabled = false;
+                        disconnectBtn.disabled = true;
+                        messageInput.disabled = true;
+                        sendBtn.disabled = true;
+                        roomIdInput.disabled = false;
+                        socket = null;
+                    };
+
+                    socket.onerror = (error) => {
+                        addMessage(`Error: ${error.message}`, "error");
+                    };
+                } catch (error) {
+                    addMessage(`Failed to connect: ${error.message}`, "error");
+                }
+            });
+
+            disconnectBtn.addEventListener("click", () => {
+                if (socket) {
+                    socket.close();
+                }
+            });
+
+            sendBtn.addEventListener("click", sendMessage);
+            messageInput.addEventListener("keypress", (e) => {
+                if (e.key === "Enter") {
+                    sendMessage();
+                }
+            });
+
+            function sendMessage() {
+                const message = messageInput.value.trim();
+                if (message && socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(message);
+                    addMessage(`Sent: ${message}`, "system");
+                    messageInput.value = "";
+                }
+            }
+        </script>
+    </body>
+</html>
