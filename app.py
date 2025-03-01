@@ -38,8 +38,8 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
     try:
         while True:
             data = await websocket.receive_text()
-
-            await manager.send_message(f"Client in room {room_id} says: {data}", room_id, websocket)
+            print(data)
+            await manager.send_message(data, room_id, websocket)
     except WebSocketDisconnect:
         manager.disconnect(websocket, room_id)
         if room_id in manager.active_connections:

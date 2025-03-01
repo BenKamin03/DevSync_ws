@@ -48,6 +48,7 @@
 
         <div class="controls">
             <input type="text" id="roomId" placeholder="Room ID" value="test-room" />
+            <input type="text" id="username" placeholder="Your Username" value="User" />
             <button id="connectBtn">Connect</button>
             <button id="disconnectBtn" disabled>Disconnect</button>
         </div>
@@ -61,6 +62,7 @@
 
         <script>
             const roomIdInput = document.getElementById("roomId");
+            const usernameInput = document.getElementById("username");
             const connectBtn = document.getElementById("connectBtn");
             const disconnectBtn = document.getElementById("disconnectBtn");
             const messageArea = document.getElementById("messageArea");
@@ -107,6 +109,7 @@
                         messageInput.disabled = false;
                         sendBtn.disabled = false;
                         roomIdInput.disabled = true;
+                        usernameInput.disabled = true;
                     };
 
                     socket.onmessage = (event) => {
@@ -120,6 +123,7 @@
                         messageInput.disabled = true;
                         sendBtn.disabled = true;
                         roomIdInput.disabled = false;
+                        usernameInput.disabled = false;
                         socket = null;
                     };
 
@@ -147,8 +151,14 @@
             function sendMessage() {
                 const message = messageInput.value.trim();
                 if (message && socket && socket.readyState === WebSocket.OPEN) {
-                    socket.send(message);
-                    addMessage(`Sent: ${message}`, "system");
+                    const username = usernameInput.value.trim() || "Anonymous";
+                    const fullMessage = JSON.stringify({
+                        username: username,
+                        message: message,
+                        timestamp: new Date().toISOString(),
+                    });
+                    socket.send(fullMessage);
+                    addMessage(`${username}: ${message}`, "system");
                     messageInput.value = "";
                 }
             }
